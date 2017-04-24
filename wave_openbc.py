@@ -9,7 +9,7 @@
         d/dt^2 h = g*H*(d/dx)^2 h
         
     with a Laplacian in space and also a Laplacian in time.
-    The boundary conditions are either Dirichlet forced in the left and open in the right."""
+    The boundary conditions are Dirichlet forced in the left and open in the right."""
     
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,12 +22,12 @@ g = 10.     # gravitational acceleration
 
 ## numerical parameters
 nx = 400                    # number of grid points for the variable h
-nt = 2000                    # number of time steps to integrate
+nt = 800                    # number of time steps to integrate
 
-cfl = 1.                    # cfl number
+cfl = 1.0                   # cfl number, 1 is the limit
 
 dx = Lx/nx                  # grid spacing
-x = np.arange(nx)*dx        # grid x
+x = np.arange(dx/2,Lx,dx)   # grid x
 cph = np.sqrt(g*H)          # long wave phase speed
 dt = cfl * dx / cph           # dt based on desired cfl-number
 q = (1-cfl)/(1+cfl)         # for open boundary conditions
