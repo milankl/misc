@@ -1,79 +1,90 @@
 ## WAVE EQ
-# solving dudt = -gdhdx & dhdt = -dx(Hu)
+""" this script solves the 1D-wave equations, i.e.
+    
+        du/dt = -g*dh/dx
+        dh/dt = -H*du/xu
+    
+    in the following form with h as prognostic variable
+    
+        d/dt^2 h = g*H*(d/dx)^2 h
+        
+    with a Laplacian in space and also a Laplacian in time.
+    The boundary conditions are either Dirichlet forced in the left and open in the right."""
+    
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import sparse
 
-##
+## physical parameters
+Lx = 1.     # D = (0,Lx) is the domain
+H = 1.      # depth at rest
+g = 10.     # gravitational acceleration
 
-nx = 400
-nt = 800
-Lx = 1.
-sigma=0.08
-cfl = 1.5
-g = 20.
+## numerical parameters
+nx = 400                    # number of grid points for the variable h
+nt = 2000                    # number of time steps to integrate
 
-#depth
-H = sparse.csc_matrix(np.diag(np.ones(nx)))
+cfl = 1.                    # cfl number
 
-#domain
-dx = Lx/nx
-u = np.sqrt(g*H.max())
-dt = cfl * dx / u
+dx = Lx/nx                  # grid spacing
+x = np.arange(nx)*dx        # grid x
+cph = np.sqrt(g*H)          # long wave phase speed
+dt = cfl * dx / cph           # dt based on desired cfl-number
+q = (1-cfl)/(1+cfl)         # for open boundary conditions
 
-#grid
-x = np.arange(nx)*dx
+## Laplace operator in space - 2nd order in space the (1,-2,1)-stencil
+# with dirichlet boundary conditions, without the 1/dx**2 factor
+L = (sparse.diags(-2*np.ones(nx),0,shape=(nx,nx)) +\
+    sparse.diags(np.ones(nx),1,shape=(nx,nx)) +\
+    sparse.diags(np.ones(nx),-1,shape=(nx,nx))).tocsr()
 
-#indices for producing gradient matrices
-p = np.arange(nx)
-pm = (p-1)%nx
-pp = (p+1)%nx
+# von neumann conditions at the right boundary for open boundary conditions
+L[-1,-1] = -1
 
-##2nd order gradient
-i = np.concatenate((p,p))
-j = np.concatenate((p,pp))
-s = np.concatenate((p*0-1,p*0+1))/(2*dx)
+## boundary conditions at the right boundary - as source term s
+omega = 40
+def s(t):
+    z = np.zeros(nx)
+    z[0] = np.sin(omega*t)
+    return z
 
-# von neumann
-s[-1] = 0
-s[nx-1] = 0
+## initial conditions
+# gaussian initial state
+#sigma = 0.08
+#h0 = np.exp(-(x-.4)**2/(2*sigma**2))
 
-# dirichlet
-#s[-1] = 0
-#s[0] = 0
+# rest
+h0 = np.zeros_like(x)
 
-G2x = sparse.coo_matrix((s,(i,j)),shape=(nx,nx)).tocsc()
+##  time integration - Laplacian in time
+h = np.zeros((nt,nx))    # preallocate
+h[0,:] = h0              # store initial conditions
+t = 0
 
-##initial state
-#s = np.zeros(nx)
-s = np.exp(-(x-.4)**2/(2*sigma**2))#*(x>.3)*(x<.5)*1
+# the first time step, use second intial condition: d/dt^2 h = 0 for t = 0
+h[1,:] = h[0,:] + cfl**2*(L.dot(h[0,:]) + s(t))
+t += dt
 
-M = -u*G2x
-M = -(M.T.dot(H)).dot(M)
-q = (1-cfl)/(1+cfl)
-
-##
-fig = plt.figure()
-ax = fig.add_subplot(111)
-sout = np.zeros((nx,nt))
-
-for kt in range(nt):
+for i in range(1,nt-1):
+    # Laplacian in time
+    h[i+1,:] = 2*h[i,:] - h[i-1,:] + cfl**2*(L.dot(h[i,:]) + s(t))
     
-    sout[:,kt] = s
-    ds = dt**2*M.dot(s)
+    # predict right-most point based on advection equation to yield open boundary conditions
+    h[i+1,-1] = h[i,-2] - q*h[i+1,-2] + q*h[i,-1]
     
-    if kt == 0:
-        s = s + ds
-    else:
-        s = 2*s - sout[:,kt-1] + ds
-        s[-1] = sout[-2,kt-1] - q*s[-2] + q*sout[-1,kt-1]
+    # update time
+    t += dt
 
-    if kt == 0:
-        l1, = plt.plot(x[1:],s[1:],lw=2)
+## PLOTTING
+ax = plt.subplots(1,1,figsize=(9,4))
+
+for frame in range(nt):
+    if frame == 0:
+        l1, = plt.plot(x,h[frame,:])
         plt.ylim(-1.5,1.5)
     else:
         plt.pause(0.00001)
-        l1.set_data(x[1:],s[1:])
+        l1.set_data(x,h[frame,:])
 
 plt.pause(1)
 plt.close('all')
