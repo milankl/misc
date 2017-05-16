@@ -18,6 +18,6 @@ def sdot(A,x):
         u,v = A.indptr[i:i+2]
         a = A.data[u:v]
         c = x[A.indices[u:v]]    
-        b[i] = sum(a*c)
+        b[i] = np.sum(a*c)
     
-    return b
+    return b,u,v,a,c

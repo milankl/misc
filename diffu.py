@@ -31,10 +31,10 @@ for i in range(10):
 ##
 fig,ax = plt.subplots(1,1)
 
-ax.plot(x,u,'o-',drawstyle='steps-mid',label=r'$u_0$')
-ax.plot(x,uh,'o-',drawstyle='steps-mid',label=r'$\partial_tu = \nu_A\partial_x^2u$')
-ax.plot(x,ub,'o-',drawstyle='steps-mid',label=r'$\partial_tu = -\nu_B\partial_x^4u$')
-ax.plot(x,ue,'o-',drawstyle='steps-mid',label=r'$\partial_tu = -\nu_B\partial_x^4u - \nu_{back}\partial_x^2u$')
+ax.plot(x,u,'-',drawstyle='steps-mid',label=r'$u_0$')
+ax.plot(x,uh,'-',drawstyle='steps-mid',label=r'$\partial_tu = \nu_A\partial_x^2u$')
+ax.plot(x,ub,'-',drawstyle='steps-mid',label=r'$\partial_tu = -\nu_B\partial_x^4u$')
+ax.plot(x,ue,'-',drawstyle='steps-mid',label=r'$\partial_tu = -\nu_B\partial_x^4u - \nu_{back}\partial_x^2u$')
 ax.plot(x,np.zeros_like(x),'--',color='grey')
 
 ax.set_xlim(-1,1)
