@@ -11,15 +11,16 @@ function box_count(x,y,z)
     Nt = length(x)
 
     for (ni,n) in enumerate(nvec)
-        B = zeros(Int,n,n,n)    # preallocate
-        N = zeros(Int,Nt+1)
+        # preallocate
+        B = zeros(Int,n,n,n)    # could also be set up as boolean, indicates whether a box has been visited or not
+        N = zeros(Int,Nt+1)     # counter array, set up as array to also check for convergence behaviour if necessary
 
         for i = 1:Nt
-            xi = Int(ceil(x[i]*n))
+            xi = Int(ceil(x[i]*n))  # allocate a point into its box via rounding
             yi = Int(ceil(y[i]*n))
             zi = Int(ceil(z[i]*n))
-            N[i+1] = N[i]+(1-B[xi,yi,zi])
-            B[xi,yi,zi] = 1
+            N[i+1] = N[i]+(1-B[xi,yi,zi])   # only add to counter if box was previously not visited
+            B[xi,yi,zi] = 1     # mark box as visited
         end
 
         Nmax[ni] = N[end]
