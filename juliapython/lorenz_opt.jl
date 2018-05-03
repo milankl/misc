@@ -7,9 +7,9 @@ function time_integration(N,x,y,z)
     for i = 1:N
 
         # RHS
-        @fastmath dx = dt*(σ*(y-x))
-        @fastmath dy = dt*(x*(ρ-z) - y)
-        @fastmath dz = dt*(x*y - β*z)
+        dx = dt*(σ*(y-x))
+        dy = dt*(x*(ρ-z) - y)
+        dz = dt*(x*y - β*z)
 
         # Euler forward
         x += dx
