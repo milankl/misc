@@ -1,38 +1,29 @@
-
 function time_integration(N,x,y,z)
 
-    # pre-allocate
-    dx,dy,dz = 0.,0.,0.
+    dx,dy,dz = 0.,0.,0.         # pre-allocate
 
     for i = 1:N
 
-        # RHS
-        dx = dt*(σ*(y-x))
+        dx = dt*(σ*(y-x))       # RHS
         dy = dt*(x*(ρ-z) - y)
         dz = dt*(x*y - β*z)
 
-        # Euler forward
-        x += dx
+        x += dx                 # Euler forward
         y += dy
         z += dz
     end
     x,y,z
 end
 
-N = Int(1e8)        # number of time steps
-const dt = 0.01     # time step
+N = Int(1e8)                    # number of time steps
+const dt = 0.01                 # time step
 
-# initial conditions
-x,y,z = 5.,5.,5.
+x,y,z = 5.,5.,5.                # initial conditions
 
-# L63 parameters
-const σ = 10.
+const σ = 10.                   # L63 parameters
 const ρ = 28.
 const β = 8./3.
 
-# compile
-time_integration(1,x,y,z)
+time_integration(1,x,y,z)       # compile
 
-# RUN
-@time x,y,z = time_integration(N,x,y,z)
-println((x,y,z))
+@time x,y,z = time_integration(N,x,y,z) # RUN
