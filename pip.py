@@ -24,13 +24,23 @@ plt.show()
 
 """
 
-polygon = Polygon(np.random.rand(N, 2), True)
-patches.append(polygon)
 
-colors = 100*np.random.rand(len(patches))
-p = PatchCollection(patches, alpha=0.4)
-p.set_array(np.array(colors))
+# Define the polygon
+poly_coords = [[0.3,0.3],[.1,0.4],[.4,.6],[.7,.5],[.6,.2]]
+poly_path = path.Path(poly_coords)
+
+# create points and check whether they are in polygon
+x = np.linspace(0,1,50)
+xx,yy = np.meshgrid(x,x)
+flags = poly_path.contains_points(random_points)
+
+# plotting
+fig,ax = plt.subplots(1,1)
+
+p = PatchCollection([Polygon(poly_coords)], alpha=0.4)
 ax.add_collection(p)
-fig.colorbar(p, ax=ax)
+
+ax.scatter(random_points[:,0],random_points[:,1])
+
 
 plt.show() 
