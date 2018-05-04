@@ -1,32 +1,29 @@
-function rhs(dx,dy,dz,x,y,z)
-    dx = σ*(y-x)
-    dy = x*(ρ-z) - y
-    dz = x*y - β*z
-    return dx,dy,dz
-end
-
 function time_integration(N,x,y,z)
-    dx,dy,dz = zeros((x,y,z))
+
+    dx,dy,dz = 0.,0.,0.         # pre-allocate
 
     for i = 1:N
-        dx,dy,dz = rhs(dx,dy,dz,x,y,z)
-        x += dt*dx
-        y += dt*dy
-        z += dt*dz
+
+        dx = dt*(σ*(y-x))       # RHS
+        dy = dt*(x*(ρ-z) - y)
+        dz = dt*(x*y - β*z)
+
+        x += dx                 # Euler forward
+        y += dy
+        z += dz
     end
-    return x,y,z
+    x,y,z
 end
 
-N = Int(1e8)
-x,y,z = 5.,5.,5.
+N = Int(1e8)                    # number of time steps
+const dt = 0.01                 # time step
 
-const σ = 10.
+x,y,z = 5.,5.,5.                # initial conditions
+
+const σ = 10.                   # L63 parameters
 const ρ = 28.
 const β = 8./3.
 
-const dt = 0.01
+time_integration(1,x,y,z)       # compile
 
-time_integration(1,x,y,z)
-
-@time x,y,z = time_integration(N,x,y,z)
-println((x,y,z))
+@time x,y,z = time_integration(N,x,y,z) # RUN
