@@ -1,7 +1,7 @@
 # UNICODE examples
 
 # call variables with greek symbols
-α = 5
+α = 4
 Δt = 0.01
 
 # instead of writing alpha_sq = alpha^2
