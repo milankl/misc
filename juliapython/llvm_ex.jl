@@ -11,4 +11,4 @@ end
 
 r = g(1.)
 
-code_native(g,(Int,))
+code_native(g,(Float64,))

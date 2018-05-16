@@ -7,5 +7,5 @@ x = np.random[:randn](200)
 xm = mean(x)
 
 plot(x)
-title("μ = $xm")
+title("α = $xm")
 xlabel("time")
