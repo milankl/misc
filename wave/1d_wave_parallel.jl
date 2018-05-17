@@ -53,32 +53,33 @@ F(x,t) = -F0*sin.(8π*x/Lx + 200*t).*sin.(π*x/Lx).^2/rho
 
 # OPERATORS - von Neumann
 function Gux(res,u)
-    res[1] = dxinv*(u[1]-u[end])
-    res[2:end] = dxinv*(u[2:end]-u[1:end-1])
+    res[:] = dxinv*(u[2:end]-u[1:end-1])
     return res
 end
 
 function GTx(res,η)
-    res[1:end-1] = dxinv*(η[2:end]-η[1:end-1])
-    res[end] = dxinv*(η[1]-η[end])
+    res[2:end-1] = dxinv*(η[2:end]-η[1:end-1])
+    res[1] = 0.
+    res[end] = 0.
     return res
 end
 
 function ITu(res,η)
-    res[1:end-1] = .5*(η[1:end-1] + η[2:end])
-    res[end] = .5*(η[1]+η[end])
+    res[2:end-1] = .5*(η[1:end-1] + η[2:end])
+    res[1] = η[1]
+    res[end] = η[end]
     return res
 end
 
 function IuT(res,u)
-    res[1] = .5*(u[1] + u[end])
-    res[2:end] = .5*(u[1:end-1]+u[2:end])
+    res[:] = .5*(u[1:end-1]+u[2:end])
     return res
 end
 
 # initial conditions
 η0 = zeros(N)
-u0 = zeros(N)
+#u0 = zeros(N)  # periodic
+u0 = zeros(N+1) # von-Neumann
 
 function rhs(du,dη,h_u,u_h,dudx,u,η,t)
     h_u = ITu(h_u,η+H)
@@ -86,7 +87,7 @@ function rhs(du,dη,h_u,u_h,dudx,u,η,t)
     dudx = Gux(dudx,u)
 
     du = -GTx(du,.5*u_h + g*η - ν*dudx)
-    du += F(x_h,t)./h_u
+    du += F(x_u,t)./h_u
 
     dη = -Gux(dη,u.*h_u)
 
