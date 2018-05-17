@@ -1,4 +1,5 @@
 # define constants
+using PyPlot
 
 const g = 10.
 const H = 10.
@@ -10,6 +11,7 @@ const ν = 0.006
 const F0 = 500.
 const Lx = 1.
 const dx = Lx/N
+const dxinv = 1./dx
 const cph = sqrt(g*H)
 const dt = cfl * dx / cph
 const RKα = [1/6.,1/3.,1/3.,1/6.]
@@ -22,28 +24,44 @@ const x_u = dx:dx:Lx        # no u-point at x=0 but at x=L (periodicity)
 F(x,t) = -F0*sin.(8π*x/Lx + 200*t).*sin.(π*x/Lx).^2/rho
 
 # OPERATORS
-function Gu(N)
-    Gux = spdiagm((ones(N),-ones(N-1)),(0,-1),N,N) / dx
-    Gux[1,N] = -1./dx
-    Gux
+function Gux(res,u)
+    res[1] = dxinv*(u[1]-u[end])
+    res[2:end] = dxinv*(u[2:end]-u[1:end-1])
+    return res
 end
 
-const Gux = Gu(N)
-const GTx = -Gux'
+function GTx(res,η)
+    res[1:end-1] = dxinv*(η[2:end]-η[1:end-1])
+    res[end] = dxinv*(η[1]-η[end])
+    return res
+end
 
-const ITu = abs.(GTx*dx/2.)
-const IuT = abs.(Gux*dx/2.)
+function ITu(res,η)
+    res[1:end-1] = .5*(η[1:end-1] + η[2:end])
+    res[end] = .5*(η[1]+η[end])
+    return res
+end
+
+function IuT(res,u)
+    res[1] = .5*(u[1] + u[end])
+    res[2:end] = .5*(u[1:end-1]+u[2:end])
+    return res
+end
+
 
 # initial conditions
 η0 = zeros(N)
 u0 = zeros(N)
 
-function rhs(du,dη,h_u,u,η,t)
-    h_u = ITu*(η+H)
+function rhs(du,dη,h_u,u_h,dudx,u,η,t)
+    h_u = ITu(h_u,η+H)
+    u_h = IuT(u_h,u.^2)
+    dudx = Gux(dudx,u)
 
-    # non-linear
-    du = -GTx*(.5*IuT*(u.^2) + g*η - ν*Gux*u) + F(x_h,t)./h_u
-    dη = -Gux*(u.*h_u)
+    du = -GTx(du,.5*u_h + g*η - ν*dudx)
+    du += F(x_h,t)./h_u
+
+    dη = -Gux(dη,u.*h_u)
 
     return du,dη
 end
@@ -55,6 +73,8 @@ function time_integration(Nt,u,η)
     u1,η1 = zeros(u),zeros(η)
     du,dη = zeros(u),zeros(η)
     h_u = zeros(u)
+    u_h = zeros(η)
+    dudx = zeros(η)
     t = 0.
 
     # for output
@@ -70,7 +90,7 @@ function time_integration(Nt,u,η)
         η1[:] = η
 
         for RKi = 1:4
-            du,dη = rhs(du,dη,h_u,u1,η1,t)
+            du,dη = rhs(du,dη,h_u,u_h,dudx,u1,η1,t)
 
             if RKi < 4 # RHS update for the next RK-step
                 u1 = u + RKβ[RKi]*dt*du
@@ -87,7 +107,7 @@ function time_integration(Nt,u,η)
         η[:] = η0
         t += dt
 
-        # output
+        # # output
         u_out[i+1,:] = u
         η_out[i+1,:] = η
 
@@ -95,7 +115,8 @@ function time_integration(Nt,u,η)
     u_out,η_out
 end
 
-u,η = time_integration(Nt,u0,η0)
+time_integration(1,u0,η0)
+@time u,η = time_integration(Nt,u0,η0)
 
 ## PLOTTING
 fig,ax = subplots()
