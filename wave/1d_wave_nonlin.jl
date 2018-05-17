@@ -3,7 +3,7 @@
 const g = 10.
 const H = 10.
 const N = 500
-const Nt = 300
+const Nt = 3000
 const cfl = 0.9
 const rho = 1.
 const ν = 0.006
@@ -19,31 +19,30 @@ const RKβ = [0.5,0.5,1.]
 const x_h = dx/2:dx:Lx
 const x_u = dx:dx:Lx        # no u-point at x=0 but at x=L (periodicity)
 
-F(x) = -F0*sin.(8π*x/Lx).*sin.(π*x/Lx)/rho
-const Fx = F(x_h)
+F(x,t) = -F0*sin.(8π*x/Lx + 200*t).*sin.(π*x/Lx).^2/rho
 
 # OPERATORS
-function GT(N)
-    GTx = spdiagm((ones(N),-ones(N-1)),(0,-1),N,N) / dx
-    GTx[1,N] = -1./dx
-    GTx
+function Gu(N)
+    Gux = spdiagm((ones(N),-ones(N-1)),(0,-1),N,N) / dx
+    Gux[1,N] = -1./dx
+    Gux
 end
 
-const GTx = GT(N)
-const Gux = -GTx'
+const Gux = Gu(N)
+const GTx = -Gux'
 
 const ITu = abs.(GTx*dx/2.)
 const IuT = abs.(Gux*dx/2.)
 
 # initial conditions
-η = zeros(N)
-u = zeros(N)
+η0 = zeros(N)
+u0 = zeros(N)
 
-function rhs(du,dη,h_u,u,η)
+function rhs(du,dη,h_u,u,η,t)
     h_u = ITu*(η+H)
 
     # non-linear
-    du = -GTx*(.5*IuT*(u.^2) + g*η - ν*Gux*u) + Fx./h_u
+    du = -GTx*(.5*IuT*(u.^2) + g*η - ν*Gux*u) + F(x_h,t)./h_u
     dη = -Gux*(u.*h_u)
 
     return du,dη
@@ -51,32 +50,66 @@ end
 
 function time_integration(Nt,u,η)
 
-    # pre-allocate
+    # pre-allocate memory
     u0,η0 = zeros(u),zeros(η)
     u1,η1 = zeros(u),zeros(η)
     du,dη = zeros(u),zeros(η)
     h_u = zeros(u)
+    t = 0.
+
+    # for output
+    u_out = zeros(Nt+1,length(u))
+    η_out = zeros(Nt+1,length(η))
+
+    # store the initial conditions
+    u_out[1,:] = u
+    η_out[1,:] = η
 
     for i = 1:Nt
         u1[:] = u
         η1[:] = η
 
-        for rki = 1:4
-            du,dη = rhs(du,dη,h_u,u,η)
+        for RKi = 1:4
+            du,dη = rhs(du,dη,h_u,u1,η1,t)
 
-            if rki < 4 # RHS update for the next RK-step
-                u1 = u + RKβ[rki]*dt*du
-                η1 = η + RKβ[rki]*dt*dη
+            if RKi < 4 # RHS update for the next RK-step
+                u1 = u + RKβ[RKi]*dt*du
+                η1 = η + RKβ[RKi]*dt*dη
             end
 
             # Summing all the RHS on the go
-            u0 += RKα[rki]*dt*du
-            η0 += RKα[rki]*dt*dη
+            u0 += RKα[RKi]*dt*du
+            η0 += RKα[RKi]*dt*dη
 
         end
 
         u[:] = u0
         η[:] = η0
+        t += dt
+
+        # output
+        u_out[i+1,:] = u
+        η_out[i+1,:] = η
+
     end
-    u,η
+    u_out,η_out
 end
+
+u,η = time_integration(Nt,u0,η0)
+
+## PLOTTING
+fig,ax = subplots()
+
+l1, = ax[:plot](x_h,η[1,:])
+ax[:set_ylim](-2,2)
+ax[:set_xlabel]("x")
+ax[:set_ylabel]("η")
+tight_layout()
+
+for it = 2:5:Nt+1
+    pause(0.00001)
+    l1[:set_data](x_h,η[it,:])
+end
+
+pause(2)
+close(fig)
