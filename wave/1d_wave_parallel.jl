@@ -24,6 +24,7 @@ end
 # Forcing
 F(x,t) = -F0*sin.(8π*x/Lx .+ 200*t).*sin.(π*x/Lx).^2/rho
 
+# RIGHT HAND SIDE
 function rhs!(du,dη,h_u,u_h,dudx,u,η,t)
 
     h = η .+ H
@@ -45,6 +46,11 @@ function rhs!(du,dη,h_u,u_h,dudx,u,η,t)
     ∂x!(dη,-U)
 end
 
+# HALO
+
+function ghost_points!(u,η)
+    #TODO
+end
 
 MPI.Init()
 comm = MPI.COMM_WORLD
@@ -76,6 +82,7 @@ const x_u = dx:dx:Lx        # no u-point at x=0 but at x=L (periodicity)
 
 
 # initial conditions
+#TODO extend with halo
 η0 = fill(0.,N)
 u0 = fill(0.,N)  # periodic
 
@@ -83,6 +90,7 @@ u0 = fill(0.,N)  # periodic
 function time_integration(Nt,u,η)
 
     # pre-allocate memory
+    #TODO adjust sizes for halo
     u0,η0 = zero(u),zero(η)
     u1,η1 = zero(u),zero(η)
     du,dη = zero(u),zero(η)
@@ -102,6 +110,8 @@ function time_integration(Nt,u,η)
     for i = 1:Nt
         u1[:] = u
         η1[:] = η
+
+        # TODO ghost point copy
 
         for RKi = 1:4
             du,dη = rhs(du,dη,h_u,u_h,dudx,u1,η1,t)
