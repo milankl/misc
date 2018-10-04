@@ -1,5 +1,58 @@
-# define constants
 using PyPlot
+using MPI
+
+# OPERATORS - PERIODIC
+function ∂x!(du::AbstractVector,u::AbstractVector)
+    m = size(du)
+    @boundscheck m+1 == size(u) || throw(BoundsError())
+
+    @inbounds for i ∈ 1:m
+        du[i] = one_over_dx*(u[i+1] - u[i])
+    end
+end
+
+function Ix!(du::AbstractVector,u::AbstractVector)
+    m = size(du)
+    @boundscheck m+1 == size(u) || throw(BoundsError()
+
+    @inbounds for i ∈ 1:m
+        du[i] = 0.5*(u[i] + u[i+1])
+    end
+end
+
+
+# Forcing
+F(x,t) = -F0*sin.(8π*x/Lx .+ 200*t).*sin.(π*x/Lx).^2/rho
+
+function rhs!(du,dη,h_u,u_h,dudx,u,η,t)
+
+    h = η .+ H
+    u² = u.^2
+
+    Ix!(h_u,h)
+    Ix!(u_h,u²)
+    ∂x!(dudx,u)
+
+    # Bernoulli potential + stress "tensor"
+    p = -.5*u_h - g*η + ν*dudx
+
+    # momentum
+    ∂x!(du,p)
+    du .+= F(x_u,t)./h_u
+
+    # continuity
+    U = u.*h_u
+    ∂x!(dη,-U)
+end
+
+
+MPI.Init()
+comm = MPI.COMM_WORLD
+MPI.Barrier(comm)
+
+
+const rank = MPI.Comm_rank(comm)
+const size = MPI.Comm_size(comm)
 
 const g = 10.
 const H = 10.
@@ -11,7 +64,7 @@ const ν = 0.006
 const F0 = 500.
 const Lx = 1.
 const dx = Lx/N
-const dxinv = 1./dx
+const one_over_dx = 1/dxs
 const cph = sqrt(g*H)
 const dt = cfl * dx / cph
 const RKα = [1/6.,1/3.,1/3.,1/6.]
@@ -21,93 +74,26 @@ const RKβ = [0.5,0.5,1.]
 const x_h = dx/2:dx:Lx
 const x_u = dx:dx:Lx        # no u-point at x=0 but at x=L (periodicity)
 
-# von Neumann boundary conditions
-const x_u = 0:dx:Lx        # no u-point at x=0 and at x=L
-
-F(x,t) = -F0*sin.(8π*x/Lx + 200*t).*sin.(π*x/Lx).^2/rho
-
-# OPERATORS - PERIODIC
-# function Gux(res,u)
-#     res[1] = dxinv*(u[1]-u[end])
-#     res[2:end] = dxinv*(u[2:end]-u[1:end-1])
-#     return res
-# end
-#
-# function GTx(res,η)
-#     res[1:end-1] = dxinv*(η[2:end]-η[1:end-1])
-#     res[end] = dxinv*(η[1]-η[end])
-#     return res
-# end
-#
-# function ITu(res,η)
-#     res[1:end-1] = .5*(η[1:end-1] + η[2:end])
-#     res[end] = .5*(η[1]+η[end])
-#     return res
-# end
-#
-# function IuT(res,u)
-#     res[1] = .5*(u[1] + u[end])
-#     res[2:end] = .5*(u[1:end-1]+u[2:end])
-#     return res
-# end
-
-# OPERATORS - von Neumann
-function Gux(res,u)
-    res[:] = dxinv*(u[2:end]-u[1:end-1])
-    return res
-end
-
-function GTx(res,η)
-    res[2:end-1] = dxinv*(η[2:end]-η[1:end-1])
-    res[1] = 0.
-    res[end] = 0.
-    return res
-end
-
-function ITu(res,η)
-    res[2:end-1] = .5*(η[1:end-1] + η[2:end])
-    res[1] = η[1]
-    res[end] = η[end]
-    return res
-end
-
-function IuT(res,u)
-    res[:] = .5*(u[1:end-1]+u[2:end])
-    return res
-end
 
 # initial conditions
-η0 = zeros(N)
-#u0 = zeros(N)  # periodic
-u0 = zeros(N+1) # von-Neumann
+η0 = fill(0.,N)
+u0 = fill(0.,N)  # periodic
 
-function rhs(du,dη,h_u,u_h,dudx,u,η,t)
-    h_u = ITu(h_u,η+H)
-    u_h = IuT(u_h,u.^2)
-    dudx = Gux(dudx,u)
-
-    du = -GTx(du,.5*u_h + g*η - ν*dudx)
-    du += F(x_u,t)./h_u
-
-    dη = -Gux(dη,u.*h_u)
-
-    return du,dη
-end
 
 function time_integration(Nt,u,η)
 
     # pre-allocate memory
-    u0,η0 = zeros(u),zeros(η)
-    u1,η1 = zeros(u),zeros(η)
-    du,dη = zeros(u),zeros(η)
-    h_u = zeros(u)
-    u_h = zeros(η)
-    dudx = zeros(η)
+    u0,η0 = zero(u),zero(η)
+    u1,η1 = zero(u),zero(η)
+    du,dη = zero(u),zero(η)
+    h_u = zero(u)
+    u_h = zero(η)
+    dudx = zero(η)
     t = 0.
 
     # for output
-    u_out = zeros(Nt+1,length(u))
-    η_out = zeros(Nt+1,length(η))
+    u_out = fill(0.,(Nt+1,length(u)))
+    η_out = fill(0.,(Nt+1,length(η)))
 
     # store the initial conditions
     u_out[1,:] = u
