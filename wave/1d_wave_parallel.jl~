@@ -51,7 +51,7 @@ function rhs!(du,dη,u,η,h,u²,h_u,u²_h,dudx,p,dpdx,U,dUdx,t)
     @views dη[2:end-1] .= -dUdx
 end
 
-"""Size of the subdomain per process."""
+""""Size of the subdomain per process."""
 function subdomain_size(N::Int,size::Int)
     if mod(N,size) == 0
         return N ÷ size
